@@ -1,0 +1,28 @@
+{%extends 'base.html'%}
+
+{%block content%}
+  <div class="center">
+	  <form method="post" style="padding-top: 150px;" action="{% url 'login' %}" novalidate>
+
+	  	{% csrf_token %}
+	    <h2 class="text-center">Log in to your account</h2>
+        <center>
+        <div class="container">
+        {{ form.as_p }}
+		{% if messages %}
+          <ul class="messages">
+            {% for message in messages %}
+              <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+            {% endfor %}
+          </ul>
+        {% endif %}
+		<input type="submit" value="Login" class="btn btn-primary full-width">
+        </div>
+        </center>
+		<hr>
+		<p class="text-center">Don't have a account? <a href={% url 'register' %}>Join Now</a></p>
+
+	</form>
+</div>
+
+{%endblock content%}

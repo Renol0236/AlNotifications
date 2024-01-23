@@ -1,0 +1,156 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    {% load static %}
+<div class="container">
+    <div class="main-body">
+          <div class="row gutters-sm">
+            <div class="col-md-4 mb-3">
+              <div class="card">
+                <div class="card-body">
+                  <div class="d-flex flex-column align-items-center text-center">
+                      {% if UserProfile.profile_picture %}
+                    <img src="{{ UserProfile.profile_picture.url }}" width="130" height="120%">
+                      {% else %}
+                      <img src="{% static 'images/profile/user.png' %}" width="130" height="120%">
+                       {% endif %}
+                    <div class="mt-3">
+                      <h4>{{ UserProfile.user.username }}</h4>
+                        <p class="">Bio</p>
+                        <div class="border-top mt-3">
+                            <p>{{ UserProfile.bio }}</p>
+                        </div>
+                      <button class="btn btn-outline-primary">Message</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="card mt-3">
+                <ul class="list-group list-group-flush">
+                  <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap">
+                    <h6 class="mb-0">Github</h6>
+                    <span class="text-secondary">bootdey</span>
+                  </li>
+                  <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap">
+                    <h6 class="mb-0">Discord</h6>
+                    <span class="text-secondary">{{ UserProfile.discord_profile.global_name }}</span>
+                  </li>
+                  <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap">
+                    <h6 class="mb-0">Telegram</h6>
+                    <span class="text-secondary">bootdey</span>
+                  </li>
+                  <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap">
+                    <h6 class="mb-0">Steam</h6>
+                    <span class="text-secondary">bootdey</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+            <div class="col-md-8">
+              <div class="card mb-3">
+                <div class="card-body">
+                {% if UserProfile.full_name %}
+                  <div class="row">
+                    <div class="col-sm-3">
+                      <h6 class="mb-0">Full Name</h6>
+                    </div>
+                    <div class="col-sm-9 text-secondary">
+                      {{ UserProfile.full_name }}
+                    </div>
+                  </div>
+                  <hr>
+                {% endif %}
+                {% if UserProfile.user.email %}
+                  <div class="row">
+                    <div class="col-sm-3">
+                      <h6 class="mb-0">Email</h6>
+                    </div>
+                    <div class="col-sm-9 text-secondary">
+                        {{ UserProfile.user.email }}
+                    </div>
+                  </div>
+                  <hr>
+                {% endif %}
+                    {% if UserProfile.phone %}
+                  <div class="row">
+                    <div class="col-sm-3">
+                      <h6 class="mb-0">Phone</h6>
+                    </div>
+                    <div class="col-sm-9 text-secondary">
+                        {{ UserProfile.phone }}
+                    </div>
+                  </div>
+                  <hr>
+                    {% endif %}
+                    {% if UserProfile.address %}
+                  <div class="row">
+                    <div class="col-sm-3">
+                      <h6 class="mb-0">Address</h6>
+                    </div>
+                    <div class="col-sm-9 text-secondary">
+                      {{ UserProfile.address }}
+                    </div>
+                  </div>
+                  <hr>
+                    {% endif %}
+                    {% if request.user.is_authenticated and request.user.id == request.resolver_match.kwargs.id %}
+                      <div class="row">
+                        <div class="col-sm-12">
+                          <a class="btn btn-info" href="{% url 'profile_update' %}">Edit</a>
+                        </div>
+                      </div>
+                    {% endif %}
+                </div>
+              </div>
+
+{% if notifications %}
+<div class="row gutters-sm">
+    <div class="col-md-6 mb-3">
+        <div class="card h-100">
+            <div class="card-body">
+                <h6 class="d-flex align-items-center mb-3"><i class="material-icons text-info mr-2">assignment</i>Tasks</h6>
+                {% for notification in notifications|slice:":5" %}
+                    <small>
+                        <a {% if request.user.is_authenticated and request.user.id == request.resolver_match.kwargs.id %}href="#" class="delete-notification-link" data-id="{{ notification.id }}{% endif %}">
+                            {{ notification.title|slice:":15" }}
+                        </a>
+                    </small>
+                    <small>For {{ notification.time|date:"d.m.Y H:i" }}</small>
+                    <div class="progress mb-3" style="height: 5px">
+                        <div class="progress-bar bg-primary" role="progressbar" style="width: 80%" aria-valuenow="80" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    {% if notifications|length >= 6 %}
+        <div class="col-md-6 mb-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h6 class="d-flex align-items-center mb-3"><i class="material-icons text-info mr-2">assignment</i>Tasks</h6>
+                    {% for notification in notifications|slice:"5:10" %}
+                        <small>{{ notification.title|slice:":15" }}</small>
+                        <small>For {{ notification.time|date:"d.m.Y H:i" }}</small>
+                        <div class="progress mb-3" style="height: 5px">
+                            <div class="progress-bar bg-primary" role="progressbar" style="width: 10%" aria-valuenow="80" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                    {% endfor %}
+                    {% if notifications|length > 10 %}
+                        <button class="btn btn-primary">All Tasks</button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+</div>
+{% else %}
+    {% if request.user.is_authenticated and request.user.id == request.resolver_match.kwargs.id %}
+        <h2>No tasks</h2>
+        <a class="btn btn-primary" href="{% url 'create_notification' %}">Add Task</a>
+    {% endif %}
+{% endif %}
+
+
+{% endblock %}

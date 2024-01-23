@@ -1,0 +1,68 @@
+/* styles.css */
+
+body {
+    font-family: 'Roboto', "Droid Sans";
+    font-size: 2em;
+    background: url("../images/bg.png") no-repeat center center fixed;
+        -webkit-background-size: cover;
+        -moz-background-size: cover;
+        -o-background-size: cover;
+        background-size: cover;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+.container {
+    margin-top: 20px;
+    flex: 1;
+}
+
+.footer {
+    background-color: #3AB9C8;
+    color: #ecf0f1;
+    border-top: 2px solid #F7B312;
+    padding: 20px 0;
+}
+
+/* NAVBAR */
+
+@import url("//maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css");
+
+.navbar {
+}
+
+.navbar-transparent {
+    background-color: rgba(0, 0, 0, 0.85); /* 85% прозрачности черного цвета */
+}
+
+
+.navbar-icon-top .navbar-nav .nav-link > .fa {
+  position: relative;
+  width: 36px;
+  font-size: 24px;
+  margin-right: 20px;
+}
+
+.navbar-icon-top .navbar-nav .nav-link > .fa > .badge {
+  font-size: 0.75rem;
+  position: absolute;
+  right: 0;
+}
+
+.navbar-icon-top .navbar-nav .nav-link > .fa {
+  top: 3px;
+  line-height: 12px;
+}
+
+.navbar-icon-top .navbar-nav .nav-link > .fa > .badge {
+  top: -10px;
+}
+
+/* else */
+
+ul {
+    list-style-type: none !important;
+}

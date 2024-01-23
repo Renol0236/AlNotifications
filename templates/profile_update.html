@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <h1>Update Profile</h1>
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Save Changes</button>
+    </form>
+{% endblock %}
+
+Lorem ipsum dolor sit amet, consectetur adipisicing elit. Alias amet aspernatur beatae consequuntur, culpa cumque et inventore ipsam laudantium libero minus, nisi perferendis quisquam veritatis, voluptate voluptatem voluptates. Perspiciatis, repudiandae.
