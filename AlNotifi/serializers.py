@@ -5,4 +5,5 @@ from .models import Notifications
 class NotificationsSerializer(serializers.ModelSerializer):
     class Meta:
         model = Notifications
-        fields = '__all__'
+        fields = "__all__"
+        extra_kwargs = {'user': {'required': False}}

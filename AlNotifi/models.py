@@ -7,7 +7,7 @@ from django.dispatch import receiver
 class DiscordProfile(models.Model):
     id = models.BigIntegerField(primary_key=True)
     discord_tag = models.CharField(max_length=100)
-    avatar = models.CharField(max_length=100)
+    avatar = models.CharField(max_length=100, null=True)
     public_flags = models.IntegerField()
     flags = models.IntegerField()
     global_name = models.CharField(max_length=100, null=True)

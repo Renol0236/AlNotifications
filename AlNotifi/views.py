@@ -2,7 +2,7 @@ from typing import Optional, Dict, Any
 
 from django import forms
 from django.shortcuts import render, redirect, get_object_or_404, HttpResponse
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponseForbidden, Http404
 from django.views.generic import TemplateView
 from django.views.generic.edit import CreateView
 from django.contrib.auth import login, authenticate, logout
@@ -22,7 +22,7 @@ from rest_framework.response import Response
 from rest_framework import viewsets, status
 from rest_framework.decorators import authentication_classes, permission_classes
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.generics import CreateAPIView, DestroyAPIView
+from rest_framework.generics import CreateAPIView, DestroyAPIView, RetrieveUpdateDestroyAPIView, UpdateAPIView
 
 from .forms import UserCreateForm, LoginForm, ProfileUpdateForm
 from .models import UserProfile, DiscordProfile, Notifications
@@ -200,9 +200,6 @@ def discord_login_redirect(request):
     else:
         return JsonResponse({'error': 'Failed to fetch user data'})
 
-# Константы для конфиденциальных данных
-
-
 def exchange_discord(code):
     # Подготовка данных для запроса токена
     data = {
@@ -245,7 +242,6 @@ def exchange_discord(code):
 # View for creating notification
 
 
-@permission_classes([IsAuthenticated])
 class NotificationsCreateView(CreateAPIView):
     queryset = Notifications.objects.all()
     serializer_class = NotificationsSerializer
@@ -275,6 +271,38 @@ class NotificationsDeleteView(DestroyAPIView):
     permission_classes = [IsAuthenticated]
     lookup_url_kwarg = 'id'
 
+    def perform_destroy(self, instance):
+        if instance.user == self.request.user:
+            instance.delete()
+        else:
+            return JsonResponse({"error": "Вы не можете удалить это уведомление"}, status=status.HTTP_403_FORBIDDEN)
+
+# Update View for notification
+
+class NotificationsUpdateView(UpdateAPIView):
+    queryset = Notifications.objects.all()
+    serializer_class = NotificationsSerializer
+    permission_classes = [IsAuthenticated]
+    lookup_url_kwarg = 'id'
+    template_name = 'update_notifi.html'
+
+    def get(self, request, *args, **kwargs):
+        notification_id = self.kwargs.get('id')
+        notification = get_object_or_404(Notifications, id=notification_id)
+
+        if notification.user.id == request.user.id:
+            return render(request, self.template_name, context={'notification': notification, 'style': 'update_notifi', 'title': 'Update Notification'})
+        else:
+            return Response({"error": "Not allowed to update"}, status=http403)
+
+    def perform_update(self, serializer):
+        instance = serializer.instance
+
+        if not instance.user.id == self.request.user.id:
+            return Response({"error": "Not allowed to update"}, status=status.HTTP_403_FORBIDDEN)
+
+        serializer.save()
+
 # Another View (utils)
 
 
@@ -286,5 +314,9 @@ def LogoutView(request): # View For User Logout
 
 
 def customhandler404(request, exception):
-    return render(request, '404.html', status=404)
+    return render(request, 'handlers/404.html', status=404)
+
+def customhandler403(request, exception):
+    return render(request, 'handlers/403.html', status=403)
+
 

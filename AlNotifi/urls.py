@@ -20,8 +20,10 @@ urlpatterns = [
     path('oauth2/discord/redirect', discord_login_redirect, name='discord_oauth_redirect'),
     path('api/create_notification/', NotificationsCreateView.as_view(), name='create_notification'),
     path('api/delete_notification/<int:id>/', NotificationsDeleteView.as_view(), name='delete_notification'),
+    path('api/update_notification/<int:id>/', NotificationsUpdateView.as_view(), name='update_notification'),
 ]
 handler404 = customhandler404
+handler403 = customhandler403
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

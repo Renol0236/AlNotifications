@@ -102,7 +102,7 @@
                     {% endif %}
                 </div>
               </div>
-
+            
 {% if notifications %}
 <div class="row gutters-sm">
     <div class="col-md-6 mb-3">
@@ -111,7 +111,7 @@
                 <h6 class="d-flex align-items-center mb-3"><i class="material-icons text-info mr-2">assignment</i>Tasks</h6>
                 {% for notification in notifications|slice:":5" %}
                     <small>
-                        <a {% if request.user.is_authenticated and request.user.id == request.resolver_match.kwargs.id %}href="#" class="delete-notification-link" data-id="{{ notification.id }}{% endif %}">
+                        <a {% if request.user.is_authenticated and request.user.id == request.resolver_match.kwargs.id %}href="{% url 'update_notification' id=notification.id %}" class="update-notification-link" data-id="{{ notification.id }}{% endif %}">
                             {{ notification.title|slice:":15" }}
                         </a>
                     </small>
@@ -148,7 +148,7 @@
 {% else %}
     {% if request.user.is_authenticated and request.user.id == request.resolver_match.kwargs.id %}
         <h2>No tasks</h2>
-        <a class="btn btn-primary" href="{% url 'create_notification' %}">Add Task</a>
+        <a class="btn btn-primary" href="{% url 'create_notification' %}">Add Notification</a>
     {% endif %}
 {% endif %}
 
