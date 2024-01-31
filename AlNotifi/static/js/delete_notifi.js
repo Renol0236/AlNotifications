@@ -20,14 +20,13 @@ $(document).ready(function () {
         type: 'DELETE',
         headers: { 'X-CSRFToken': getCookie('csrftoken') },
         success: function () {
-
-          $('#confirmation-modal').modal('hide');
-
-          updateTasks();
+          updateTasks()
+          window.location = "http://webyk.in.net/blog"
 
         },
         error: function (error) {
           console.error('Ошибка при удалении уведомления:', error);
+          window.location = "http://webyk.in.net/blog"
         }
       });
       function getCookie(name) {

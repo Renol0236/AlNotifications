@@ -1,41 +1,37 @@
-from typing import Optional, Dict, Any
-
-from django import forms
-from django.shortcuts import render, redirect, get_object_or_404, HttpResponse
-from django.http import JsonResponse, HttpResponseForbidden, Http404
+from django.shortcuts import render, redirect, get_object_or_404
+from django.http import JsonResponse, HttpResponseRedirect
 from django.views.generic import TemplateView
-from django.views.generic.edit import CreateView
-from django.contrib.auth import login, authenticate, logout
+from django.contrib.auth import login, logout
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.contrib.auth.views import LoginView, LogoutView
-from django.contrib.auth.decorators import login_required
-from django.utils.decorators import method_decorator
-from django.views.generic.detail import DetailView
+from django.contrib.auth.views import LoginView
 from django.contrib import messages
 from django.views import View
 from django.urls import reverse_lazy
 from django.utils import timezone
 
 import requests
+from asgiref.sync import async_to_sync
 
 from rest_framework.response import Response
-from rest_framework import viewsets, status
-from rest_framework.decorators import authentication_classes, permission_classes
+from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.generics import CreateAPIView, DestroyAPIView, RetrieveUpdateDestroyAPIView, UpdateAPIView
+from rest_framework.generics import CreateAPIView, DestroyAPIView, UpdateAPIView
 
 from .forms import UserCreateForm, LoginForm, ProfileUpdateForm
 from .models import UserProfile, DiscordProfile, Notifications
-from .utils import DataMixin, menu, RedirectToIndexMixin
+from .utils import DataMixin, RedirectToIndexMixin
 from .serializers import NotificationsSerializer
 
 # Index View (Main Page)
 
+#from botdir.bot import start_send_notification
 
 class IndexView(DataMixin, TemplateView): # Главная страница
     template_name = 'index.html'
-
     def get_context_data(self, **kwargs):
+
+        async_to_sync(start_send_notification)(95)
+
         addc = {
             'title' : 'Главная',
             'style': 'index',
@@ -166,7 +162,7 @@ class ProfileUpdateView(DataMixin, LoginRequiredMixin, View):
         context = super().get_context_data(**addc)
         return context
 
-# Discord o2auth
+# Discord oauth
 
 
 auth_url_discord = "https://discord.com/api/oauth2/authorize?client_id=1197441739959566356&response_type=code&redirect_uri=http%3A%2F%2Flocalhost%3A8000%2Foauth2%2Fdiscord%2Fredirect&scope=identify"
@@ -180,7 +176,7 @@ def discord_login_redirect(request):
 
     if user_data:
         discord_profile, created = DiscordProfile.objects.update_or_create(
-            id=user_data['id'],
+            discord_id=user_data['id'],
             defaults={
                 'discord_tag': f"{user_data['username']}#{user_data['discriminator']}",
                 'avatar': user_data['avatar'],
@@ -201,7 +197,7 @@ def discord_login_redirect(request):
         return JsonResponse({'error': 'Failed to fetch user data'})
 
 def exchange_discord(code):
-    # Подготовка данных для запроса токена
+
     data = {
         "client_id": '1197441739959566356',
         "client_secret": '8YDjA3IL5xP5eM2gyV2sAFhggAQPflLU',
@@ -211,12 +207,10 @@ def exchange_discord(code):
         'scope': 'identify email guilds',
     }
 
-    # Заголовки для запросов
     headers = {
         'Content-type': 'application/x-www-form-urlencoded'
     }
 
-    # Выполнение запроса токена
     with requests.Session() as session:
         response = session.post('https://discord.com/api/oauth2/token', data=data, headers=headers)
 
@@ -241,6 +235,7 @@ def exchange_discord(code):
 
 # View for creating notification
 
+from .tasks import send_task_to_bot
 
 class NotificationsCreateView(CreateAPIView):
     queryset = Notifications.objects.all()
@@ -249,6 +244,7 @@ class NotificationsCreateView(CreateAPIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
+
         return render(request, self.template_name, {})
 
     def post(self, request, *args, **kwargs):
@@ -274,6 +270,7 @@ class NotificationsDeleteView(DestroyAPIView):
     def perform_destroy(self, instance):
         if instance.user == self.request.user:
             instance.delete()
+            return redirect('index')
         else:
             return JsonResponse({"error": "Вы не можете удалить это уведомление"}, status=status.HTTP_403_FORBIDDEN)
 
@@ -289,17 +286,16 @@ class NotificationsUpdateView(UpdateAPIView):
     def get(self, request, *args, **kwargs):
         notification_id = self.kwargs.get('id')
         notification = get_object_or_404(Notifications, id=notification_id)
-
         if notification.user.id == request.user.id:
-            return render(request, self.template_name, context={'notification': notification, 'style': 'update_notifi', 'title': 'Update Notification'})
+            return render(request, self.template_name, context={'notification': notification})
         else:
-            return Response({"error": "Not allowed to update"}, status=http403)
+            return JsonResponse({"error": "Not allowed to update"}, status=status.HTTP_403_FORBIDDEN)
 
     def perform_update(self, serializer):
         instance = serializer.instance
-
+        print('perform update')
         if not instance.user.id == self.request.user.id:
-            return Response({"error": "Not allowed to update"}, status=status.HTTP_403_FORBIDDEN)
+            return JsonResponse({"error": "Not allowed to update"}, status=status.HTTP_403_FORBIDDEN)
 
         serializer.save()
 
@@ -316,7 +312,7 @@ def LogoutView(request): # View For User Logout
 def customhandler404(request, exception):
     return render(request, 'handlers/404.html', status=404)
 
+
 def customhandler403(request, exception):
     return render(request, 'handlers/403.html', status=403)
-
 

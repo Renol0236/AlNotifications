@@ -5,7 +5,7 @@ from django.dispatch import receiver
 
 
 class DiscordProfile(models.Model):
-    id = models.BigIntegerField(primary_key=True)
+    discord_id = models.BigIntegerField(null=True)
     discord_tag = models.CharField(max_length=100)
     avatar = models.CharField(max_length=100, null=True)
     public_flags = models.IntegerField()
@@ -20,6 +20,13 @@ class Notifications(models.Model):
     title = models.CharField(max_length=50)
     message = models.TextField(max_length=500)
     time = models.DateTimeField()
+    SENT_CHOICES = (
+        ('discord', 'Discord'),
+        ('telegram', 'Telegram'),
+        ('phone', 'Phone'),
+        ('email', 'Email'),
+    )
+    sent_to = models.CharField(max_length=10, choices=SENT_CHOICES)
     is_sent = models.BooleanField(default=False)
 
 class UserProfile(models.Model):
@@ -34,5 +41,3 @@ class UserProfile(models.Model):
 
     def __str__(self):
         return self.user.username
-
-

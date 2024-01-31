@@ -6,4 +6,4 @@ class NotificationsSerializer(serializers.ModelSerializer):
     class Meta:
         model = Notifications
         fields = "__all__"
-        extra_kwargs = {'user': {'required': False}}
+        extra_kwargs = {'user': {'required': False}, 'sent_to': {'required': False}}

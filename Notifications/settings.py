@@ -37,7 +37,9 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    "AlNotifi.apps.AlnotifiConfig"
+    "AlNotifi.apps.AlnotifiConfig",
+    "django_celery_results",
+    "django_celery_beat",
 ]
 
 SOCIAL_AUTH_DISCORD_KEY = '1197441739959566356'
@@ -145,7 +147,21 @@ MEDIA_ROOT = BASE_DIR / 'media'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 REST_FRAMEWORK = {
-    'DEFAULT_RENDERER_CLASSES': (
+    'DEFAULT_RENDERER_CLASSES': [
         'rest_framework.renderers.JSONRenderer',
-    ),
+    ],
 }
+
+# CELERY SETTINGS
+
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_RESULT_BACKEND = 'django-db'
+
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": f"redis://127.0.0.1:6379/1",
+    }
+}
+
+CELERY_CACHE_BACKEND = 'default'
