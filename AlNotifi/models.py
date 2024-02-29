@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from datetime import timedelta
 
 
 class DiscordProfile(models.Model):
@@ -15,23 +16,25 @@ class DiscordProfile(models.Model):
     mfa_enabled = models.BooleanField()
     last_login = models.DateTimeField()
 
+
 class Notifications(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     title = models.CharField(max_length=50)
     message = models.TextField(max_length=500)
     time = models.DateTimeField()
-    SENT_CHOICES = (
-        ('discord', 'Discord'),
-        ('telegram', 'Telegram'),
-        ('phone', 'Phone'),
-        ('email', 'Email'),
-    )
-    sent_to = models.CharField(max_length=10, choices=SENT_CHOICES)
+    # SENT_CHOICES = (
+    #     ('discord', 'Discord'),
+    #     ('telegram', 'Telegram'),
+    #     ('phone', 'Phone'),
+    #     ('email', 'Email'),
+    # )
+    # sent_to = models.CharField(max_length=10, choices=SENT_CHOICES)
     is_sent = models.BooleanField(default=False)
+    task_id = models.CharField(max_length=100, blank=True, null=True)
 
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
-    discord_profile = models.OneToOneField(DiscordProfile, on_delete=models.CASCADE, blank=True, null=True)
+    discord_profile = models.OneToOneField(DiscordProfile, on_delete=models.SET_NULL, blank=True, null=True)
     bio = models.TextField(max_length=250, blank=True)
     phone = models.BigIntegerField(blank=True, null=True)
     full_name = models.CharField(blank=True, null=True)

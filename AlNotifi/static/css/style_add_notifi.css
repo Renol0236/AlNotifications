@@ -1,0 +1,11 @@
+.card {
+    font-family: 'Montserrat';
+    font-size: 15px;
+    margin-top: 75px;
+}
+
+.card-body {
+    border: 2px solid #ddd;
+    background-color: #99b7f1;
+}
+

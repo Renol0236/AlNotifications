@@ -1,4 +1,4 @@
-from django.shortcuts import render, redirect, get_object_or_404
+from django.shortcuts import render, redirect, get_object_or_404, HttpResponse
 from django.http import JsonResponse, HttpResponseRedirect
 from django.views.generic import TemplateView
 from django.contrib.auth import login, logout
@@ -8,29 +8,36 @@ from django.contrib import messages
 from django.views import View
 from django.urls import reverse_lazy
 from django.utils import timezone
+from django.utils.timezone import make_aware
+from django.http import HttpResponseBadRequest
+from django.template.loader import render_to_string
+from django.http import HttpResponse
 
 import requests
+from datetime import datetime
+from datetime import timedelta
 from asgiref.sync import async_to_sync
 
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.generics import CreateAPIView, DestroyAPIView, UpdateAPIView
+from rest_framework.generics import CreateAPIView, DestroyAPIView, UpdateAPIView, ListAPIView
+from rest_framework.views import APIView
 
 from .forms import UserCreateForm, LoginForm, ProfileUpdateForm
 from .models import UserProfile, DiscordProfile, Notifications
 from .utils import DataMixin, RedirectToIndexMixin
 from .serializers import NotificationsSerializer
+from django.db import IntegrityError
 
 # Index View (Main Page)
 
-#from botdir.bot import start_send_notification
+def test_view(request):
+    return render(request, 'base_old.html')
 
 class IndexView(DataMixin, TemplateView): # Главная страница
     template_name = 'index.html'
     def get_context_data(self, **kwargs):
-
-        async_to_sync(start_send_notification)(95)
 
         addc = {
             'title' : 'Главная',
@@ -72,7 +79,7 @@ class RegisterView(DataMixin, RedirectToIndexMixin, View):
     def get_context_data(self, form, **kwargs):
         addc = {
             'title': 'Sign up',
-            'style': 'login',
+            'style': 'register',
             'form': form,
         }
         context = super().get_context_data(**addc)
@@ -116,6 +123,7 @@ class ProfileView(DataMixin, View):
     def get(self, request, id):
         current_user = get_object_or_404(UserProfile, id=id)
         users_notifications = Notifications.objects.filter(user=id)
+        users_notifications = Notifications.objects.filter(is_sent=False)
         context = self.get_context_data(current_user, user_notifications=users_notifications)
         return render(request, self.template_name, context)
 
@@ -155,7 +163,7 @@ class ProfileUpdateView(DataMixin, LoginRequiredMixin, View):
     def get_context_data(self, form, **kwargs):
         addc = {
             'title': 'Profile',
-            'style': 'profile',
+            'style': 'profile_update',
             'form': form,
         }
 
@@ -189,12 +197,34 @@ def discord_login_redirect(request):
             }
         )
 
-        request.user.userprofile.discord_profile = discord_profile
-        request.user.userprofile.save()
+        try:
+            request.user.userprofile.discord_profile = discord_profile
+            request.user.userprofile.save()
+        except IntegrityError:
+            return HttpResponseBadRequest('Discord Profile already linked to another user.')
 
-        return JsonResponse({'user': user_data})
+        return HttpResponseRedirect('/')
     else:
-        return JsonResponse({'error': 'Failed to fetch user data'})
+        return HttpResponseBadRequest('Cant to load Discord user data.')
+
+
+def discord_unlink(request):
+    if request.method == 'POST':
+        try:
+            user_profile = UserProfile.objects.get(user=request.user)
+        except UserProfile.DoesNotExist:
+            return JsonResponse({'message': 'User profile not found'}, status=404)
+
+        if user_profile.discord_profile:
+            user_profile.discord_profile.delete()
+            user_profile.discord_profile = None
+            user_profile.save()
+            return JsonResponse({'message': 'Discord account unlinked successfully'})
+        else:
+            return JsonResponse({'message': 'No Discord account linked'}, status=400)
+    else:
+        return JsonResponse({'message': 'Method not allowed'}, status=405)
+
 
 def exchange_discord(code):
 
@@ -237,26 +267,52 @@ def exchange_discord(code):
 
 from .tasks import send_task_to_bot
 
-class NotificationsCreateView(CreateAPIView):
+class NotificationsCreateView(DataMixin, CreateAPIView):
     queryset = Notifications.objects.all()
     serializer_class = NotificationsSerializer
     template_name = 'create_notifi.html'
     permission_classes = [IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
-
-        return render(request, self.template_name, {})
+        context = self.get_context_data()
+        return render(request, self.template_name, context)
 
     def post(self, request, *args, **kwargs):
         data = request.data.copy()
         data['user'] = request.user.id
+
+        user_profile = get_object_or_404(UserProfile, user=request.user)
+        if not user_profile.discord_profile:
+            error_message = "Discord profile not linked!"
+            error_page = render_to_string('handlers/422.html', {'error_message': error_message})
+            return HttpResponseBadRequest(error_page)
+
+        time = data.get('time')
+        if time:
+            time = datetime.strptime(time, '%Y-%m-%dT%H:%M')
+            time = make_aware(time)
+            current_time = timezone.localtime(timezone.now())
+            print(f'Current time: {current_time}, Time to send: {time}')
+            if current_time > time:
+                return JsonResponse({"error": "Time is not valid"}, status=status.HTTP_403_FORBIDDEN)
 
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
         headers = self.get_success_headers(serializer.data)
 
-        return redirect('profile', id = request.user.id)
+        return redirect('profile', id=request.user.id)
+
+    def get_context_data(self, **kwargs):
+
+        addc = {
+            'title' : 'Add Notififation',
+            'style': 'add_notifi',
+        }
+
+        context = super().get_context_data(**addc)
+
+        return context
 
 # View for deleting notification
 
@@ -270,9 +326,9 @@ class NotificationsDeleteView(DestroyAPIView):
     def perform_destroy(self, instance):
         if instance.user == self.request.user:
             instance.delete()
-            return redirect('index')
+            return JsonResponse({"success": "Notification deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
         else:
-            return JsonResponse({"error": "Вы не можете удалить это уведомление"}, status=status.HTTP_403_FORBIDDEN)
+            return JsonResponse({"error": "You cannot delete this notification"}, status=status.HTTP_403_FORBIDDEN)
 
 # Update View for notification
 
@@ -298,6 +354,22 @@ class NotificationsUpdateView(UpdateAPIView):
             return JsonResponse({"error": "Not allowed to update"}, status=status.HTTP_403_FORBIDDEN)
 
         serializer.save()
+
+# List notifications view
+
+class NotificationsListApiView(ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = NotificationsSerializer
+    def get_queryset(self):
+        user = self.request.user
+
+        return Notifications.objects.filter(user=user)
+
+class NotificationsListView(APIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request):
+        return render(request, 'list_notifi.html')
+
 
 # Another View (utils)
 
